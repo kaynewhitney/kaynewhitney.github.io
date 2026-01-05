@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kayne Whitney</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: #f3f5f7;
+      --panel: rgba(255,255,255,0.72);
+      --panel-solid: #ffffff;
+      --text: #14181f;
+      --muted: #566070;
+      --line: rgba(20,24,31,0.12);
+
+      --accent: rgba(140, 245, 255, 0.9);
+      --accent-soft: rgba(140, 245, 255, 0.22);
+
+      --shadow: 0 18px 50px rgba(18, 24, 32, 0.10);
+      --shadow-soft: 0 10px 30px rgba(18, 24, 32, 0.08);
+
+      --radius-lg: 22px;
+      --radius-md: 16px;
+
+
+      --portrait-w: 200px;
+
+
+      --scan-rail-w: 34px;
+      --scan-rail-pad: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body{
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1100px 600px at 20% 0%, rgba(140,245,255,0.10), transparent 55%),
+                  radial-gradient(900px 500px at 80% 10%, rgba(140,245,255,0.07), transparent 60%),
+                  linear-gradient(180deg, #fafbfc 0%, var(--bg) 55%, #eef1f4 100%);
+      overflow-x: hidden;
+    }
+
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.55;
+      background:
+        linear-gradient(to right, rgba(20,24,31,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(20,24,31,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at 50% 10%, black 0%, transparent 70%);
+    }
+
+    .wrap{
+      width: min(1100px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    header{
+      position: relative;
+      width: 100%;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .banner{
+      position: relative;
+      width: 100%;
+      height: clamp(160px, 26vw, 320px);
+      overflow: hidden;
+    }
+
+    .banner img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: grayscale(20%) contrast(1.05);
+    }
+
+    .banner::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,0.00) 0%,
+          rgba(255,255,255,0.05) 30%,
+          rgba(140,245,255,0.10) 55%,
+          rgba(255,255,255,0.00) 100%),
+        repeating-linear-gradient(
+          to bottom,
+          rgba(20,24,31,0.02) 0px,
+          rgba(20,24,31,0.02) 1px,
+          transparent 2px,
+          transparent 7px
+        );
+      mix-blend-mode: screen;
+      pointer-events:none;
+    }
+
+    main{
+      padding: 28px 0 18px;
+    }
+
+    .about-card{
+      position: relative;
+      padding: 26px;
+      padding-right: calc(26px + var(--scan-rail-w) + var(--scan-rail-pad));
+
+      border-radius: var(--radius-lg);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+
+    .about-card::before,
+    .about-card::after{
+      content:"";
+      position:absolute;
+      width: 170px;
+      height: 170px;
+      border-radius: 999px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .about-card::before{
+      top:-55px; left:-55px;
+      box-shadow: inset 0 0 0 1px rgba(140,245,255,0.18);
+    }
+    .about-card::after{
+      bottom:-55px; right:-55px;
+      box-shadow: inset 0 0 0 1px rgba(140,245,255,0.14);
+    }
+
+
+    .about-text{
+      position: relative;
+      z-index: 1;
+    }
+
+    .kicker{
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin: 0 0 10px;
+    }
+
+    h1{
+      margin: 0 0 12px;
+      font-size: clamp(28px, 3.1vw, 40px);
+      letter-spacing: 0.02em;
+      line-height: 1.1;
+    }
+
+    .role{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.55);
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 14px;
+    }
+
+    .role .dot{
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .role span{
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .about-text p{
+      margin: 0 0 12px;
+      color: #232a35;
+      line-height: 1.65;
+      font-size: 15.5px;
+    }
+    .about-text p:last-child{ margin-bottom: 0; }
+
+    .meta{
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip{
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #2d3848;
+      padding: 9px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.55);
+    }
+
+    .about-portrait{
+      float: right;
+      width: var(--portrait-w);
+      margin: 6px 0 12px 18px;
+    }
+
+    .about-text::after{
+      content: "";
+      display: block;
+      clear: both;
+    }
+
+    .portrait-frame{
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .portrait-frame img{
+      width: 100%;
+      height: auto;
+      display: block;
+      filter: grayscale(15%) contrast(1.05);
+    }
+
+    .portrait-frame::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(800px 260px at 30% 0%, rgba(140,245,255,0.18), transparent 60%),
+        repeating-linear-gradient(to bottom, rgba(20,24,31,0.03) 0px, rgba(20,24,31,0.03) 1px, transparent 2px, transparent 8px);
+      pointer-events:none;
+      mix-blend-mode: screen;
+      opacity: 0.9;
+    }
+
+
+    .scan-rail{
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      bottom: 18px;
+      width: var(--scan-rail-w);
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.58);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      z-index: 2;
+    }
+
+
+    .scan-rail::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(140px 240px at 30% 0%, rgba(140,245,255,0.16), transparent 60%),
+        repeating-linear-gradient(
+          to bottom,
+          rgba(20,24,31,0.03) 0px,
+          rgba(20,24,31,0.03) 1px,
+          transparent 2px,
+          transparent 10px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.95;
+      pointer-events:none;
+    }
+
+    .scan-line{
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      height: 500px;
+      top: 100\px;
+      border-radius: 999px;
+      background: linear-gradient(90deg,
+        rgba(140,245,255,0.00),
+        rgba(140,245,255,0.95),
+        rgba(140,245,255,0.00)
+      );
+      box-shadow:
+        0 0 99px rgba(140,245,255,0.80),
+        0 0 28px rgba(140,245,255,0.35);
+      animation: scanMove 11.0s ease-in-out infinite;
+    }
+
+
+
+    .scan-line::after{
+      content:"";
+      position:absolute;
+      inset:-6px -2px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(140,245,255,0.18), transparent 70%);
+      filter: blur(0.5px);
+      opacity: 0.9;
+      pointer-events:none;
+    }
+
+    @keyframes scanMove{
+      0%   { top: 10px; opacity: 0.35; }
+      45%  { opacity: 1; }
+      50%  { top: calc(100% - 13px); opacity: 1; }
+      55%  { opacity: 0.7; }
+      100% { top: 10px; opacity: 0.35; }
+    }
+
+   .site-footer{
+      margin-top: 28px;
+      padding: 14px 0 20px;
+      border-top: 1px solid var(--line);
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .footer-copy{
+      margin: 0;
+      text-align: left;
+      color: rgba(86,96,112,0.95);
+      font-size: 12px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+
+    .icon{
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      border-radius: 4px;
+      background: linear-gradient(135deg, rgba(140,245,255,0.55), rgba(20,24,31,0.10));
+      border: 1px solid rgba(20,24,31,0.10);
+    }
+
+    @media (max-width: 700px){
+      .about-portrait{
+        float: none;
+        width: min(220px, 100%);
+        margin: 0 auto 14px;
+      }
+
+      .scan-rail{
+        right: 12px;
+        top: 14px;
+        bottom: 14px;
+        width: 26px;
+      }
+      .about-card{
+        padding-right: calc(26px + 26px + 16px);
+      }
+    }
+    .updates{
+      margin-top: 22px;
+    }
+
+    .updates-head{
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 12px;
+    }
+
+    .updates-title{
+      margin: 0;
+      font-size: 16px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .updates-hint{
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: rgba(86, 96, 112, 0.85);
+      user-select: none;
+    }
+
+    .updates-shell{
+      position: relative;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .updates-shell::before,
+    .updates-shell::after{
+      content:"";
+      position:absolute;
+      top:0; bottom:0;
+      width: 56px;
+      pointer-events:none;
+      z-index: 2;
+    }
+    .updates-shell::before{
+      left:0;
+      background: linear-gradient(to right, rgba(243,245,247,0.95), rgba(243,245,247,0.0));
+    }
+    .updates-shell::after{
+      right:0;
+      background: linear-gradient(to left, rgba(243,245,247,0.95), rgba(243,245,247,0.0));
+    }
+
+    .updates-track{
+      display: flex;
+      gap: 14px;
+      padding: 16px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-padding: 16px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(200,245,255,0.95) transparent;
+    }
+
+    .updates-track::-webkit-scrollbar{ height: 10px; }
+    .updates-track::-webkit-scrollbar-track{ background: transparent; }
+    .updates-track::-webkit-scrollbar-thumb{
+      background: rgba(20,24,31,0.18);
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.55);
+    }
+
+    .update-card{
+      flex: 0 0 clamp(260px, 32vw, 360px);
+      scroll-snap-align: start;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.62);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+      position: relative;
+    }
+
+    .update-card:hover{
+      transform: translateY(-2px);
+      border-color: rgba(140,245,255,0.55);
+      box-shadow: 0 18px 48px rgba(18, 24, 32, 0.12);
+    }
+
+    .update-media{
+      position: relative;
+      aspect-ratio: 16 / 10;
+      background: var(--panel-solid);
+      overflow: hidden;
+    }
+
+    .update-media img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: grayscale(15%) contrast(1.05);
+    }
+
+    .update-media::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(900px 260px at 30% 0%, rgba(140,245,255,0.18), transparent 60%),
+        repeating-linear-gradient(
+          to bottom,
+          rgba(20,24,31,0.03) 0px,
+          rgba(20,24,31,0.03) 1px,
+          transparent 2px,
+          transparent 8px
+        );
+      mix-blend-mode: screen;
+      pointer-events:none;
+      opacity: 0.9;
+    }
+
+    .update-body{
+      padding: 12px 14px 14px;
+    }
+
+    .update-kicker{
+      margin: 0 0 8px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(86, 96, 112, 0.95);
+    }
+
+    .update-blurb{
+      margin: 0;
+      color: #232a35;
+      line-height: 1.55;
+      font-size: 14.5px;
+      white-space: pre-line;
+    }
+
+    .footer-links img{
+      width: 18px;
+      height: 18px;
+      filter: grayscale(100%) brightness(0.6);
+      opacity: 0.75;
+      transition: filter .15s ease, opacity .15s ease, transform .15s ease;
+    }
+
+    .footer-links a:hover img{
+      filter: grayscale(0%) brightness(1);
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+  </style>
+</head>
+
+
+
+
+
+
+<body>
+
+  <header>
+    <div class="banner">
+      <img src="images/Banner.jpg" alt="Banner image" />
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="about-card">
+      <div class="about-text">
+        <h1>KAYNE WHITNEY</h1>
+
+        <div class="role">
+          <span class="dot" aria-hidden="true"></span>
+          <span>Cybersecurity • Threat Hunting • Incident Response</span>
+        </div>
+
+        <p>
+          Kayne Whitney is a cybersecurity professional and student specializing in security operations,
+          threat hunting, and incident response. He currently works as a cyber security analyst for the
+          State of Wisconsin and serves as a cybersecurity consultant for a consulting company.
+        </p>
+
+        <aside class="about-portrait">
+          <div class="portrait-frame">
+            <img src="images/Portrait.jpg" alt="Portrait of me" />
+          </div>
+        </aside>
+
+        <p>
+          Academically, Kayne studies Cybersecurity at the University of Wisconsin–Stout. He is a transfer
+          student from Madison College, where he earned his associate degree with academic honors as a cybersecurity specialist.
+          At UW–Stout, he serves multiple roles. He is a Director on the Student Senate, is the Cybersecurity Program Ambassador,
+          and is the Vice President of the Cybersecurity Club. In the cybersecurity club he leads as team captain for the
+          University's National Cyber League team and also competes on the Collegiate Cyber Defense Competition team as the Linux Threat Hunter.
+        </p>
+
+        <p>
+          In his free time, he enjoys archery, long-distance running, 3D printing, and weightlifting.
+        </p>
+
+        <div class="meta" aria-label="Highlights">
+          <span class="chip">SOC</span>
+          <span class="chip">Threat Hunting</span>
+          <span class="chip">Incident Response</span>
+          <span class="chip">National Cyber League</span>
+          <span class="chip">Collegiate Cyber Defense Competition</span>
+        </div>
+      </div>
+
+      <div class="scan-rail" aria-hidden="true">
+        <span class="scan-line"></span>
+      </div>
+    </section>
+
+    <section class="updates" aria-label="Updates">
+      <div class="updates-head">
+        <h2 class="updates-title">Updates</h2>
+        <span class="updates-hint">MORE →</span>
+      </div>
+
+      <div class="updates-shell">
+        <div class="updates-track" id="updatesTrack">
+
+          <article class="update-card">
+            <div class="update-media">
+              <img src="images/NCL.jpg" alt="NCL" />
+            </div>
+            <div class="update-body">
+              <p class="update-kicker">National Cyber League</p>
+              <p class="update-blurb">Last weekend was the conclusion of the National Cyber League!
+
+I served the role of Team Captain / Competitor for Cyber@Stout’s first ever NCL competition and we dominated!
+
+Proud to say that after 3 hard days of challenges, we placed among the top 1% of competitors, securing our place among the top teams in the nation.</p>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-media">
+              <img src="images/Werner.jpg" alt="WERNER" />
+            </div>
+            <div class="update-body">
+              <p class="update-kicker">Werner Electric CyberSecurity Summit</p>
+              <p class="update-blurb">This afternoon I had a great time presenting at the Werner Electric Cyber Security Summit. This was a great opportunity to talk about our work competing in cyber competitions and our initiatives to help foster a strong cybersecurity community at UW Stout!</p>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-media">
+              <img src="images/CCDC-Green-Bubble.png" alt="CCDC" />
+            </div>
+            <div class="update-body">
+              <p class="update-kicker">Collegiate Cyber Defense Competition</p>
+              <p class="update-blurb">Excited to say that our Collegiate Cyber Defense Competition team placed 1st for State Qualifiers! I had a great time competing, writing scripts, and defending vulnerable systems against a professional group of red teamers!</p>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-media">
+              <img src="images/CYSA.jpg" alt="CYSA" />
+            </div>
+            <div class="update-body">
+              <p class="update-kicker">CompTIA CYSA+ Certification</p>
+              <p class="update-blurb">Excited to announce that I have passed the CompTIA CYSA+ exam!
+
+This certification focuses on incident response, forensics, threat detection, threat intelligence, and vulnerability management.</p>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+      
+    <footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-copy">© <span id="year"></span> Kayne Whitney</p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+
+  </main>
+</body>
+</html>
