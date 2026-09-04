@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>~/sorting_ritual: team recommendation</title>
+<style>
+  :root{
+    --bg:#0c0c0c;
+    --bg-panel:#111111;
+    --border:#2b2b2b;
+    --fg:#cfcfcf;
+    --fg-dim:#6e6e6e;
+    --accent:#6fae7f;
+    --font-mono: Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg); color:var(--fg);
+    font-family:var(--font-mono);
+  }
+
+  #term{
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    background:var(--bg);
+  }
+
+  .term-titlebar{
+    display:flex; align-items:baseline; gap:10px; flex-shrink:0;
+    padding:8px 14px; background:var(--bg-panel); border-bottom:1px solid var(--border);
+    font-size:12px; color:var(--fg-dim);
+  }
+  .term-title{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .term-counter{ color:var(--fg-dim); font-size:12px; white-space:nowrap; }
+
+  #screen{
+    flex:1; overflow-y:auto; overflow-x:hidden;
+    padding:20px 16px 40px;
+  }
+  #log{ max-width:800px; margin:0 auto; display:flex; flex-direction:column; }
+
+  .line{
+    font-size:15px; line-height:1.55; color:var(--fg);
+    margin-bottom:2px; white-space:pre-wrap; word-break:break-word;
+  }
+  .line.dim{ color:var(--fg-dim); }
+  .line.spacer{ height:14px; }
+  .prompt{ color:var(--accent); }
+  .cursor{ display:inline-block; margin-left:1px; animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .cursor.done{ display:none; }
+
+  .options{ margin:10px 0 18px; display:flex; flex-direction:column; gap:2px; }
+  .opt{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:5px 8px; cursor:pointer;
+    border-left:2px solid transparent; color:var(--fg); font-size:14.5px; line-height:1.45;
+  }
+  .opt .idx{ color:var(--fg-dim); flex-shrink:0; }
+  .opt .caret{ color:var(--accent); flex-shrink:0; width:12px; visibility:hidden; }
+  .opt.sel{ border-left-color:var(--accent); background:var(--bg-panel); }
+  .opt.sel .caret{ visibility:visible; }
+  .opt:focus{ outline:1px solid var(--fg-dim); outline-offset:1px; }
+  .opt.chosen{ border-left-color:var(--accent); background:var(--bg-panel); color:var(--fg); }
+  .opt.chosen .caret{ visibility:visible; }
+  .opt.fade{ opacity:.4; pointer-events:none; }
+  .opt.locked{ cursor:default; }
+
+  .verdict{ font-size:17px; font-weight:700; margin:14px 0 4px; color:var(--accent); }
+  .blurb{ font-size:14.5px; color:var(--fg); line-height:1.6; margin-top:2px; }
+  .bars{ margin-top:12px; font-size:13.5px; white-space:pre; color:var(--fg); line-height:1.7; }
+  .footnote{ margin-top:16px; font-size:13.5px; color:var(--fg-dim); line-height:1.6; border-top:1px solid var(--border); padding-top:12px; }
+
+  ::-webkit-scrollbar{ width:10px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); }
+
+  @media (max-width:640px){
+    .term-title{ font-size:11px; }
+    .line, .opt{ font-size:14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cursor, .opt{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="term">
+  <div class="term-titlebar">
+    <div class="term-title">personofalltime@localhost:~/sorting_ritual</div>
+    <div class="term-counter" id="counter">boot</div>
+  </div>
+  <div id="screen"><div id="log"></div></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var QUESTIONS = [
+    { topic:"club_tenure", q:"how long have you been a member of the club?",
+      opts:[
+        {t:"less than one semester", s:{ncl:3}},
+        {t:"one to two years", s:{ncae:2, ccdc:1}},
+        {t:"more than two years", s:{ccdc:3}}
+      ]},
+    { topic:"prior_comp", q:"have you previously competed in a cybersecurity competition?",
+      opts:[
+        {t:"no, this would be my first competition", s:{ncl:3}},
+        {t:"yes, in informal or practice competitions", s:{ncae:3}},
+        {t:"yes, in multiple formal competition seasons", s:{ccdc:2, ncae:1}}
+      ]},
+    { topic:"weekly_commitment", q:"how many weekly in person meetings can you commit to this semester?",
+      opts:[
+        {t:"one meeting per week", s:{ncl:3}},
+        {t:"two meetings per week", s:{ccdc:3}},
+        {t:"i cannot commit to a regular weekly meeting this semester", s:{ncae:3}}
+      ]},
+    { topic:"schedule_fit", q:"ncl meets fridays from 6:30 pm to 7:30 pm. ccdc meets fridays from 7:30 pm to 9:00 pm and saturdays from 10:00 am to 2:00 pm. which schedule works best for you?",
+      opts:[
+        {t:"friday evening only, 6:30 pm to 7:30 pm", s:{ncl:3}},
+        {t:"friday evening and saturday, as listed above", s:{ccdc:3}},
+        {t:"neither schedule works for me this semester", s:{ncae:3}}
+      ]},
+    { topic:"fall_or_spring", q:"do you intend to compete this fall, or wait until spring?",
+      opts:[
+        {t:"this fall", s:{ncl:3}},
+        {t:"i would prefer to begin in the spring", s:{ncae:3}},
+        {t:"i am open to either", s:{ccdc:2, ncae:1}}
+      ]},
+    { topic:"live_pressure", q:"if a system you are responsible for is being actively attacked, how would you respond?",
+      opts:[
+        {t:"i would want guidance from a more experienced person", s:{ncl:3}},
+        {t:"i would prefer to review the incident afterward rather than respond in real time", s:{ncae:3}},
+        {t:"i would isolate the threat and restore the system without assistance", s:{ccdc:3}}
+      ]},
+    { topic:"team_environment", q:"which team environment do you prefer?",
+      opts:[
+        {t:"a small, low pressure team focused on building foundational skills", s:{ncl:3}},
+        {t:"a team that solves scored challenges together on a consistent weekly schedule", s:{ncae:3}},
+        {t:"a team with assigned roles actively defending a system under time pressure", s:{ccdc:3}}
+      ]},
+    { topic:"server_admin", q:"how would you describe your experience administering servers, such as linux or windows, including managing users, permissions, and services?",
+      opts:[
+        {t:"limited experience, mostly from coursework", s:{ncl:3}},
+        {t:"moderate experience, including personal or lab projects", s:{ncae:2}},
+        {t:"significant experience, including professional or advanced work", s:{ccdc:3}}
+      ]},
+    { topic:"c2_beacon", q:"if you discovered a command and control (c2) beacon communicating from a system, what would you do first?",
+      opts:[
+        {t:"isolate the host from the network and block the destination address", s:{ccdc:3}},
+        {t:"monitor the beacon to gather more information before taking action", s:{ncae:2}},
+        {t:"i don't know", s:{ncl:3}}
+      ]},
+    { topic:"writing", q:"how comfortable are you writing a professional report describing a security incident for a non technical audience?",
+      opts:[
+        {t:"not very comfortable, but willing to learn", s:{ncl:2}},
+        {t:"i would rather focus on the technical challenge than the writeup", s:{ncae:2}},
+        {t:"comfortable, i have written similar reports before", s:{ccdc:3}}
+      ]},
+    { topic:"valuable_outcome", q:"which outcome would you consider most valuable this semester?",
+      opts:[
+        {t:"gaining confidence and foundational experience in a supportive environment", s:{ncl:3}},
+        {t:"improving measurable technical skills as part of a team, over a full season", s:{ncae:3}},
+        {t:"demonstrating your team's ability to defend a live system under pressure", s:{ccdc:3}}
+      ]},
+    { topic:"real_time_eval", q:"how do you feel about being evaluated in real time while completing tasks?",
+      opts:[
+        {t:"i would prefer additional support while being evaluated", s:{ncl:3}},
+        {t:"i would prefer to complete tasks and be scored afterward", s:{ncae:3}},
+        {t:"being evaluated in real time does not significantly affect my performance", s:{ccdc:2}}
+      ]},
+    { topic:"it_experience", q:"how would you describe your prior it or networking experience?",
+      opts:[
+        {t:"primarily classroom based", s:{ncl:3}},
+        {t:"some hands on experience outside of coursework", s:{ncae:2}},
+        {t:"professional or advanced hands on experience", s:{ccdc:3}}
+      ]},
+    { topic:"compromised", q:"if a system is compromised during a competition, what is your immediate priority?",
+      opts:[
+        {t:"requesting help from a teammate or mentor", s:{ncl:3}},
+        {t:"documenting the issue for review after the event", s:{ncae:2}},
+        {t:"restoring the affected service while maintaining operations", s:{ccdc:3}}
+      ]},
+    { topic:"simulated_employee", q:"during a competition, a simulated employee contacts you requesting technical assistance, such as a password reset. how would you respond?",
+      opts:[
+        {t:"i would ask a more experienced teammate to assist", s:{ncl:2}},
+        {t:"this is not something i expect in my preferred competition format", s:{ncae:2}},
+        {t:"i would handle the request directly, as part of the overall task", s:{ccdc:3}}
+      ]},
+    { topic:"hardware", q:"do you have experience building or maintaining hardware, such as a raspberry pi project or home network equipment?",
+      opts:[
+        {t:"no, but i am interested in gaining this experience", s:{ncl:2}},
+        {t:"some experience with personal projects or a home lab", s:{ncae:2}},
+        {t:"yes, i regularly build, maintain, or repair hardware or infrastructure", s:{ccdc:2, ncae:1}}
+      ]},
+    { topic:"sustained_pressure", q:"how would you describe your comfort level working under sustained time pressure, such as a multi hour defensive exercise?",
+      opts:[
+        {t:"i would prefer shorter, lower pressure exercises", s:{ncl:3}},
+        {t:"i have not been tested under sustained pressure, but am willing to try", s:{ncae:2}},
+        {t:"i am comfortable working under sustained pressure for multiple hours", s:{ccdc:3}}
+      ]},
+    { topic:"career_interest", q:"which best describes your current career interest?",
+      opts:[
+        {t:"i am still exploring options within cybersecurity", s:{ncl:3}},
+        {t:"penetration testing, security research, or a related offensive role", s:{ncae:2}},
+        {t:"systems administration, security engineering, or a related defensive role", s:{ccdc:3}}
+      ]},
+    { topic:"independent_prep", q:"how would you describe your ability to prepare independently between meetings, using self paced training materials?",
+      opts:[
+        {t:"i would need significant structure and guidance to prepare independently", s:{ncl:3}},
+        {t:"i can prepare independently on a flexible schedule", s:{ncae:3}},
+        {t:"i prepare independently and also assist teammates with preparation", s:{ccdc:2, ncae:1}}
+      ]},
+    { topic:"primary_goal", q:"what is your primary goal in joining a competition team this semester?",
+      opts:[
+        {t:"build foundational skills and confidence before committing to a more advanced competition", s:{ncl:3}},
+        {t:"develop and demonstrate technical skills as part of a team, on a consistent weekly schedule", s:{ncae:3}},
+        {t:"test your team's ability to defend a live system against active adversaries", s:{ccdc:3}}
+      ]}
+  ];
+
+  var RESULTS = {
+    ncl:{
+      title:"National Cyber League",
+      blurb:"Based on your responses, it is recommended that you join the National Cyber League team. This is a team competition, not an individual one. The team meets in Jarvis Hall 112 on Fridays from 6:30 PM to 7:30 PM.",
+      footnote:false
+    },
+    ncae:{
+      title:"NCAE Cyber Games",
+      blurb:"Based on your responses, NCAE Cyber Games is recommended, but it does not begin until spring. For this fall, you should join the NCL group. You may also consider trying out for the CCDC team for additional experience. Joining NCL this fall is strongly recommended, since top performers from the fall NCL season will compete in NCAE Cyber Games in the spring.",
+      footnote:true
+    },
+    ccdc:{
+      title:"Collegiate Cyber Defense Competition",
+      blurb:"Based on your responses, it is recommended that you join the Collegiate Cyber Defense Competition team. This team meets Fridays from 7:30 PM to 9:00 PM and Saturdays from 10:00 AM to 2:00 PM.",
+      footnote:true
+    }
+  };
+
+  var FOOTNOTE_TEXT = "Note: NCL is open to students of all experience levels. Regardless of the recommendation above, it is also recommended that you join NCL this semester.";
+
+  var scores = {ncl:0, ncae:0, ccdc:0};
+  var qIndex = 0;
+  var selIndex = 0;
+  var typing = false;
+  var typeTimer = null;
+  var pendingCb = null;
+  var currentFullText = "";
+  var currentTypeEl = null;
+  var activeOptionsEl = null;
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var logEl = document.getElementById("log");
+  var screenEl = document.getElementById("screen");
+  var counterEl = document.getElementById("counter");
+
+  function scrollDown(){ screenEl.scrollTop = screenEl.scrollHeight; }
+
+  function el(tag, cls, html){
+    var d = document.createElement(tag);
+    if(cls) d.className = cls;
+    if(html !== undefined) d.innerHTML = html;
+    return d;
+  }
+
+  function appendLine(text, cls){
+    var d = el("div", "line" + (cls ? " " + cls : ""), text);
+    logEl.appendChild(d);
+    scrollDown();
+    return d;
+  }
+
+  function appendSpacer(){
+    logEl.appendChild(el("div", "line spacer"));
+  }
+
+  function typePrompt(text, cb){
+    var line = el("div", "line");
+    var promptSpan = el("span", "prompt", "root@personofalltime:~$ ");
+    var textSpan = el("span");
+    var cursor = el("span", "cursor", "\u258B");
+    line.appendChild(promptSpan);
+    line.appendChild(textSpan);
+    line.appendChild(cursor);
+    logEl.appendChild(line);
+    scrollDown();
+
+    clearTimeout(typeTimer);
+    pendingCb = cb || null;
+    currentFullText = text;
+    currentTypeEl = textSpan;
+
+    if(reducedMotion){
+      textSpan.textContent = text;
+      cursor.classList.add("done");
+      typing = false;
+      var c0 = pendingCb; pendingCb = null;
+      if(c0) c0();
+      return;
+    }
+
+    typing = true;
+    var i = 0;
+    function step(){
+      if(!typing){ return; }
+      if(i <= text.length){
+        textSpan.textContent = text.slice(0, i);
+        i++;
+        scrollDown();
+        typeTimer = setTimeout(step, 14 + Math.random()*10);
+      } else {
+        typing = false;
+        cursor.classList.add("done");
+        var c = pendingCb; pendingCb = null;
+        if(c) c();
+      }
+    }
+    step();
+  }
+
+  function skipTyping(){
+    if(typing && currentTypeEl){
+      typing = false;
+      clearTimeout(typeTimer);
+      currentTypeEl.textContent = currentFullText;
+      var line = currentTypeEl.parentElement;
+      var cursor = line ? line.querySelector(".cursor") : null;
+      if(cursor) cursor.classList.add("done");
+      var c = pendingCb; pendingCb = null;
+      if(c) c();
+    }
+  }
+
+  screenEl.addEventListener("click", function(){ if(typing) skipTyping(); });
+
+  function renderOptions(opts, onChoose){
+    var wrap = el("div", "options");
+    var chosen = false;
+    opts.forEach(function(opt, i){
+      var row = el("div", "opt");
+      row.setAttribute("tabindex", "0");
+      row.setAttribute("role", "button");
+      row.innerHTML = '<span class="idx">['+(i+1)+']</span><span class="caret">&gt;</span><span class="txt"></span>';
+      row.querySelector(".txt").textContent = opt.t;
+      row.addEventListener("mouseenter", function(){ setSel(wrap, i); });
+      row.addEventListener("focus", function(){ setSel(wrap, i); });
+      row.addEventListener("click", function(){ if(!chosen){ chosen = true; choose(i); } });
+      wrap.appendChild(row);
+    });
+    logEl.appendChild(wrap);
+    activeOptionsEl = wrap;
+    selIndex = 0;
+    setSel(wrap, 0);
+    scrollDown();
+
+    function choose(i){
+      var rows = wrap.querySelectorAll(".opt");
+      rows.forEach(function(r, idx){
+        r.classList.remove("sel");
+        r.classList.add("locked");
+        r.setAttribute("tabindex", "-1");
+        if(idx === i){ r.classList.add("chosen"); }
+        else { r.classList.add("fade"); }
+      });
+      activeOptionsEl = null;
+      onChoose(i, opts[i]);
+    }
+
+    function keyHandler(e){
+      if(activeOptionsEl !== wrap) return;
+      var n = opts.length;
+      if(e.key === "ArrowDown"){ e.preventDefault(); setSel(wrap, (selIndex+1)%n); }
+      else if(e.key === "ArrowUp"){ e.preventDefault(); setSel(wrap, (selIndex-1+n)%n); }
+      else if(e.key === "Enter"){ e.preventDefault(); if(!chosen){ chosen = true; choose(selIndex); } }
+      else if(/^[1-9]$/.test(e.key)){
+        var idx = parseInt(e.key,10)-1;
+        if(idx < n && !chosen){ chosen = true; choose(idx); }
+      }
+    }
+    document.addEventListener("keydown", keyHandler);
+  }
+
+  function setSel(wrap, i){
+    selIndex = i;
+    var rows = wrap.querySelectorAll(".opt");
+    rows.forEach(function(r, idx){ r.classList.toggle("sel", idx === i); });
+  }
+
+  function updateCounter(text){ counterEl.textContent = text; }
+
+  function askQuestion(){
+    if(qIndex >= QUESTIONS.length){ return finishQuiz(); }
+    var n = qIndex+1;
+    updateCounter("query " + (n<10?"0"+n:n) + "/" + QUESTIONS.length);
+    var q = QUESTIONS[qIndex];
+    typePrompt(q.q, function(){
+      renderOptions(q.opts, function(i, opt){
+        Object.keys(opt.s).forEach(function(k){ scores[k] += opt.s[k]; });
+        appendSpacer();
+        qIndex++;
+        setTimeout(askQuestion, 300);
+      });
+    });
+  }
+
+  function winnerKey(){
+    var keys = Object.keys(scores);
+    keys.sort(function(a,b){ return scores[b]-scores[a]; });
+    return keys[0];
+  }
+
+  function barsText(){
+    var total = scores.ncl + scores.ncae + scores.ccdc;
+    if(total <= 0) total = 1;
+    function bar(label, val){
+      var pct = Math.round((val/total)*100);
+      var filled = Math.round((val/total)*10);
+      return label.padEnd(6," ") + " " + "\u2588".repeat(filled) + "\u2591".repeat(10-filled) + "  " + (pct+"%").padStart(4," ");
+    }
+    return bar("NCL", scores.ncl) + "\n" + bar("NCAE", scores.ncae) + "\n" + bar("CCDC", scores.ccdc);
+  }
+
+  function finishQuiz(){
+    updateCounter("analyzing");
+    typePrompt("analyzing responses...", function(){
+      setTimeout(showResult, 900);
+    });
+  }
+
+  function showResult(){
+    var win = winnerKey();
+    var r = RESULTS[win];
+    updateCounter("result");
+    var block = el("div", "line");
+    block.innerHTML =
+      '<div class="verdict">'+r.title+'</div>' +
+      '<div class="blurb">'+r.blurb+'</div>' +
+      '<div class="bars">'+barsText()+'</div>' +
+      (r.footnote ? '<div class="footnote">'+FOOTNOTE_TEXT+'</div>' : '');
+    logEl.appendChild(block);
+    scrollDown();
+    appendSpacer();
+    renderOptions([{t:"run ./recalibrate.sh"}], function(){
+      appendSpacer();
+      scores = {ncl:0, ncae:0, ccdc:0};
+      qIndex = 0;
+      setTimeout(askQuestion, 300);
+    });
+  }
+
+  function boot(){
+    updateCounter("boot");
+    typePrompt("./sorting_ritual.sh", function(){
+      appendLine("loading question bank... 20 entries found", "dim");
+      appendLine("ready.", "dim");
+      appendSpacer();
+      renderOptions([{t:"begin assessment"}], function(){
+        appendSpacer();
+        askQuestion();
+      });
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
